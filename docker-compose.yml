@@ -15,7 +15,7 @@ services:
 
       # ---- Сетевые настройки ----
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
 
@@ -47,6 +47,56 @@ services:
     restart: unless-stopped
     networks:
       - kafka-net
+
+  api-kafka-gateway:
+    build:
+      context: ./api-kafka-gateway
+      dockerfile: Dockerfile
+    container_name: api-kafka-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      KAFKA_BROKER: kafka:9092
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - kafka-net
+    restart: unless-stopped
+
+  auth-microservice:
+    build:
+      context: ./auth-microservice
+      dockerfile: Dockerfile
+    container_name: auth-microservice
+    ports:
+      - "3001:3001"
+    environment:
+      KAFKA_BROKER: kafka:9092
+      PORT: 3001
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - kafka-net
+    restart: unless-stopped
+
+  user-microservice:
+    build:
+      context: ./user-microservice
+      dockerfile: Dockerfile
+    container_name: user-microservice
+    ports:
+      - "3002:3002"
+    environment:
+      KAFKA_BROKER: kafka:9092
+      PORT: 3002
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - kafka-net
+    restart: unless-stopped
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
